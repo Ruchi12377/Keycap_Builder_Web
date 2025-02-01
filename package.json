@@ -21,7 +21,7 @@
     "@types/three": "^0.163.0",
     "@typescript-eslint/eslint-plugin": "^6.20.0",
     "cors-anywhere": "^0.4.4",
-    "cypress": "^13.6.4",
+    "cypress": "^14.0.1",
     "cypress-multi-reporters": "^1.6.4",
     "cypress-terminal-report": "^6.0.2",
     "cypress-visual-regression": "^5.0.0",
