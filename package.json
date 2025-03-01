@@ -25,7 +25,7 @@
     "cypress-multi-reporters": "^1.6.4",
     "cypress-terminal-report": "^6.0.2",
     "cypress-visual-regression": "^5.0.0",
-    "esbuild": "0.20.1",
+    "esbuild": "0.25.0",
     "esbuild-plugin-copy": "^2.1.1",
     "esbuild-plugin-replace": "^1.4.0",
     "eslint": "^8.56.0",
