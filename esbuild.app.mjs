@@ -2,12 +2,7 @@
 import { copy } from "esbuild-plugin-copy";
 import { replace } from "esbuild-plugin-replace";
 
-const defaultCorsProxy = "http://localhost:8888/";
-
-export default (opt_options) => {
-	const corsProxy =
-		process.env.CORSPROXY || opt_options?.corsProxyUrl || defaultCorsProxy;
-
+export default () => {
 	return {
 		entryPoints: ["src/index.tsx", "src/index.html"],
 		bundle: true,
@@ -41,7 +36,6 @@ export default (opt_options) => {
 				watch: true,
 			}),
 			replace({
-				__CORSPROXY: corsProxy,
 				__TRACKER_SNIPPET: process.env.TRACKER_SNIPPET || "",
 				__GITHUB_ISSUE_URL: process.env.GH_ISSUE_URL || "",
 				__GITHUB_REPO_URL: process.env.GH_REPO_URL || "",

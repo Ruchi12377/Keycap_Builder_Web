@@ -1,5 +1,4 @@
 /* eslint-env node */
-import corsAnywhere from 'cors-anywhere';
 import * as esbuild from 'esbuild';
 
 import appBuildConfig from './esbuild.app.mjs';
@@ -13,14 +12,6 @@ if (process.argv?.length > 2) {
   if (process.argv.includes('--cors-proxy')) {
     const host = process.env.CORS_HOST || '0.0.0.0';
     const port = process.env.CORS_PORT || 8888;
-
-    corsAnywhere
-      .createServer({
-        originWhitelist: [], // Allow all origins
-      })
-      .listen(port, host, function () {
-        console.log('Running CORS Anywhere on ' + host + ':' + port);
-      });
 
     appOptions.corsProxyUrl = `http://${host}:${port}/`;
   }
