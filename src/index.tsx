@@ -6,15 +6,15 @@ import { CssBaseline } from "@mui/material";
 import { SnackbarProvider, enqueueSnackbar } from "notistack";
 import React from "react";
 import { createRoot } from "react-dom/client";
-import App from "./App";
 import OpenscadWorkerProvider from "./components/providers/OpenscadWorkerProvider";
+import Workspace from "./components/Workspace";
 
 createRoot(document.getElementById("root")).render(
 	<React.StrictMode>
 		<CssBaseline />
 		<SnackbarProvider />
 		<OpenscadWorkerProvider>
-			<App />
+			<Workspace />
 		</OpenscadWorkerProvider>
 	</React.StrictMode>,
 );
