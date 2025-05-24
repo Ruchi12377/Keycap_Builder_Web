@@ -1,64 +1,49 @@
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import DownloadIcon from "@mui/icons-material/Download";
 import UploadIcon from "@mui/icons-material/Upload";
-import { Box, Button, CircularProgress, Typography } from "@mui/material";
+import { Button } from "@mui/material";
 import JSZip from "jszip";
 import React, { useCallback, useState } from "react";
 import { Fragment } from "react";
-import type { Field } from "./Workspace";
+import { MODEL_PATHS } from "../constants/appConstants";
+import { loadKeycapTemplate } from "../services/keycapService";
+import type { Field } from "../types/Field";
+import { downloadFile, escapeString, makeFilenameSafe } from "../utils/fileUtils";
+import LoadingOverlay from "./LoadingOverlay";
 import { useOpenSCADProvider } from "./providers/OpenscadWorkerProvider";
 
-type Props = {
+interface ButtonsProps {
 	fields: Field[];
 	setFields: (fields: Field[]) => void;
-};
+}
 
-const escapeString = (str: string) => {
-	return str
-		.replace(/\\/g, "\\\\")
-		.replace(/"/g, '\\"')
-		.replace(/'/g, "\\'")
-		.replace(/\n/g, "\\n")
-		.replace(/\r/g, "\\r")
-		.replace(/\t/g, "\\t");
-};
+interface LoadingState {
+	loading: boolean;
+	exportedFile: number;
+}
 
-const makeFilenameSafe = (name: string) => {
-	return name
-		.replace(/\//g, "slash")
-		.replace(/\\/g, "backslash")
-		.replace(/:/g, "colon")
-		.replace(/\*/g, "asterisk")
-		.replace(/\?/g, "question")
-		.replace(/"/g, "quote")
-		.replace(/</g, "less")
-		.replace(/>/g, "greater")
-		.replace(/\|/g, "pipe");
-};
-
-let keycap = "";
-
-export default function Buttons({ fields, setFields }: Props) {
+/**
+ * Component containing action buttons for the keycap builder
+ */
+export default function Buttons({ fields, setFields }: ButtonsProps) {
 	const { execExport, isExporting } = useOpenSCADProvider();
-	const [loadingState, setLoadingState] = useState({
+	const [loadingState, setLoadingState] = useState<LoadingState>({
 		loading: false,
 		exportedFile: 0,
 	});
 
-	const downloadFile = useCallback((filename: string, obj: File | Blob) => {
-		const url = URL.createObjectURL(obj);
-		const a = document.createElement("a");
-		a.href = url;
-		a.download = filename;
-		a.click();
-	}, []);
-
+	/**
+	 * Handles downloading the current layout as JSON
+	 */
 	const handleDownload = useCallback(() => {
 		const json = JSON.stringify(fields);
 		const blob = new Blob([json], { type: "application/json" });
 		downloadFile("keycap-builder.json", blob);
-	}, [fields, downloadFile]);
+	}, [fields]);
 
+	/**
+	 * Handles uploading a layout JSON file
+	 */
 	const handleUpload = useCallback(() => {
 		const input = document.createElement("input");
 		input.type = "file";
@@ -68,12 +53,17 @@ export default function Buttons({ fields, setFields }: Props) {
 			if (file) {
 				const reader = new FileReader();
 				reader.onload = () => {
-					const json = reader.result as string;
-					const data = JSON.parse(json);
-					const newFields = data.map((field: Field) => ({
-						...field,
-					}));
-					setFields(newFields);
+					try {
+						const json = reader.result as string;
+						const data = JSON.parse(json);
+						const newFields = data.map((field: Field) => ({
+							...field,
+						}));
+						setFields(newFields);
+					} catch (error) {
+						console.error("Failed to parse JSON file:", error);
+						alert("Invalid layout file format");
+					}
 				};
 				reader.readAsText(file);
 			}
@@ -81,76 +71,104 @@ export default function Buttons({ fields, setFields }: Props) {
 		input.click();
 	}, [setFields]);
 
+	/**
+	 * Creates a customized keycap model based on field values
+	 */
+	const createKeycapModel = (keycapTemplate: string, field: Field): string => {
+		const importModelPath = MODEL_PATHS[field.model];
+		const replacements = {
+			LLB: field.type === 0 ? escapeString(field.main) : "",
+			LLT: field.type === 0 ? escapeString(field.shift) : "",
+			LRT: field.type === 0 ? escapeString(field.fn) : "",
+			LC: field.type === 1 ? escapeString(field.center) : "",
+			MODEL_PATH: importModelPath,
+			CENTER_ROTATION: field.angle.toString(),
+			NEED_BUMP: field.needBump.toString(),
+		};
+
+		let customKeycap = keycapTemplate;
+		for (const [key, value] of Object.entries(replacements)) {
+			const regex = new RegExp(key, "g");
+			customKeycap = customKeycap.replace(regex, value);
+		}
+
+		return customKeycap;
+	};
+
+	/**
+	 * Generates a filename for the exported keycap model
+	 */
+	const generateKeycapFilename = (field: Field): string => {
+		const safeLLB = makeFilenameSafe(field.main);
+		const safeLLT = makeFilenameSafe(field.shift);
+		const safeLRB = makeFilenameSafe(field.fn);
+		const safeLC = makeFilenameSafe(field.center);
+		const modelType = ["U", "O", "F"][field.model];
+		const needBump = field.needBump ? "Bump" : "";
+
+		return field.type === 0
+			? `Keycap_${safeLLB}_${safeLLT}_${safeLRB}_${needBump}_${modelType}.stl`
+			: `Keycap_${safeLC}_${field.angle}_${needBump}_${modelType}.stl`;
+	};
+
+	/**
+	 * Exports keycap models for all fields
+	 */
 	const exportKeycap = async () => {
-		if (!keycap) {
-			const response = await fetch("Keycap.scad", {
-				method: "GET",
-				headers: {
-					"Content-Type": "application/json",
-				},
-			});
-			if (!response.ok) {
-				console.error("Failed to export keycap:", response.statusText);
-				return;
+		try {
+			// Load keycap template
+			const keycapTemplate = await loadKeycapTemplate();
+			const exportedFiles: { file: File; name: string }[] = [];
+
+			// Set initial loading state
+			setLoadingState({ loading: true, exportedFile: 0 });
+
+			// Process each field
+			for (let index = 0; index < fields.length; index++) {
+				const field = fields[index];
+
+				// Create customized keycap model
+				const customKeycap = createKeycapModel(keycapTemplate, field);
+				const filename = generateKeycapFilename(field);
+
+				// Export the model
+				const stlFile = await execExport(customKeycap);
+				exportedFiles.push({ file: stlFile, name: filename });
+
+				// Update progress
+				setLoadingState({ loading: true, exportedFile: index + 1 });
 			}
 
-			keycap = await response.text();
-		}
-		const exportedFiles: { file: File; name: string }[] = [];
-		setLoadingState({ loading: true, exportedFile: 0 });
+			// Handle download - single file or zip archive
+			if (exportedFiles.length === 1) {
+				const file = exportedFiles[0];
+				downloadFile(file.name, file.file);
+			} else {
+				const zip = new JSZip();
+				for (const { name, file } of exportedFiles) {
+					zip.file(name, file);
+				}
 
-		for (let index = 0; index < fields.length; index++) {
-			const field = fields[index];
-
-			const importModelPath = ["Cap_U.stl", "Cap_O.stl", "Cap_Flat.stl"][
-				field.model
-			];
-			const replacements = {
-				LLB: field.type === 0 ? escapeString(field.main) : "",
-				LLT: field.type === 0 ? escapeString(field.shift) : "",
-				LRT: field.type === 0 ? escapeString(field.fn) : "",
-				LC: field.type === 1 ? escapeString(field.center) : "",
-				MODEL_PATH: importModelPath,
-				CENTER_ROTATION: field.angle.toString(),
-				NEED_BUMP: field.needBump.toString(),
-			};
-
-			let customKeycap = keycap;
-			for (const [key, value] of Object.entries(replacements)) {
-				const regex = new RegExp(key, "g");
-				customKeycap = customKeycap.replace(regex, value);
+				const zipBlob = await zip.generateAsync({ type: "blob" });
+				downloadFile("keycaps.zip", zipBlob);
 			}
-
-			const safeLLB = makeFilenameSafe(field.main);
-			const safeLLT = makeFilenameSafe(field.shift);
-			const safeLRB = makeFilenameSafe(field.fn);
-			const safeLC = makeFilenameSafe(field.center);
-			const modelType = ["U", "O", "F"][field.model];
-			const needBump = field.needBump ? "Bump" : "";
-			const filename =
-				field.type === 0
-					? `Keycap_${safeLLB}_${safeLLT}_${safeLRB}_${needBump}_${modelType}.stl`
-					: `Keycap_${safeLC}_${field.angle}_${needBump}_${modelType}.stl`;
-
-			const stlFile = await execExport(customKeycap);
-			exportedFiles.push({ file: stlFile, name: filename });
-			setLoadingState({ loading: true, exportedFile: index + 1 });
+		} catch (error) {
+			console.error("Failed to export keycap:", error);
+			alert("Failed to export keycap. See console for details.");
+		} finally {
+			// Reset loading state
+			setLoadingState({ loading: false, exportedFile: 0 });
 		}
+	};
 
-		if (exportedFiles.length === 1) {
-			const file = exportedFiles[0];
-			downloadFile(file.name, file.file);
-		} else {
-			const zip = new JSZip();
-			for (const { name, file } of exportedFiles) {
-				zip.file(name, file);
-			}
-
-			const zipBlob = await zip.generateAsync({ type: "blob" });
-			downloadFile("keycaps.zip", zipBlob);
-		}
-
-		setLoadingState({ loading: false, exportedFile: 0 });
+	// Common button style
+	const buttonStyle = {
+		borderColor: "#fff",
+		color: "#fff",
+		"&:hover": {
+			borderColor: "#ccc",
+			color: "#ccc",
+		},
 	};
 
 	return (
@@ -160,14 +178,7 @@ export default function Buttons({ fields, setFields }: Props) {
 				disabled={isExporting}
 				endIcon={<AutoAwesomeIcon />}
 				onClick={exportKeycap}
-				sx={{
-					borderColor: "#fff",
-					color: "#fff",
-					"&:hover": {
-						borderColor: "#ccc",
-						color: "#ccc",
-					},
-				}}
+				sx={buttonStyle}
 			>
 				Export Keycap
 			</Button>
@@ -176,14 +187,7 @@ export default function Buttons({ fields, setFields }: Props) {
 				disabled={isExporting}
 				endIcon={<DownloadIcon />}
 				onClick={handleDownload}
-				sx={{
-					borderColor: "#fff",
-					color: "#fff",
-					"&:hover": {
-						borderColor: "#ccc",
-						color: "#ccc",
-					},
-				}}
+				sx={buttonStyle}
 			>
 				Download Layout
 			</Button>
@@ -192,66 +196,17 @@ export default function Buttons({ fields, setFields }: Props) {
 				disabled={isExporting}
 				endIcon={<UploadIcon />}
 				onClick={handleUpload}
-				sx={{
-					borderColor: "#fff",
-					color: "#fff",
-					"&:hover": {
-						borderColor: "#ccc",
-						color: "#ccc",
-					},
-				}}
+				sx={buttonStyle}
 			>
 				Upload Layout
 			</Button>
+
+			{/* Loading overlay with progress indicator */}
 			{loadingState.loading && (
-				<Box
-					sx={{
-						position: "fixed",
-						top: 0,
-						left: 0,
-						width: "100vw",
-						height: "100vh",
-						backgroundColor: "rgba(0, 0, 0, 0.5)",
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "center",
-						zIndex: 1300,
-					}}
-				>
-					<Box
-						sx={{
-							position: "relative",
-							display: "inline-flex",
-							backgroundColor: "white",
-							borderRadius: "50%",
-							padding: 2,
-						}}
-					>
-						<CircularProgress
-							variant="determinate"
-							size={120}
-							value={(loadingState.exportedFile / fields.length) * 100}
-						/>
-						<Box
-							sx={{
-								top: 0,
-								left: 0,
-								bottom: 0,
-								right: 0,
-								position: "absolute",
-								display: "flex",
-								alignItems: "center",
-								justifyContent: "center",
-							}}
-						>
-							<Typography
-								variant="caption"
-								component="div"
-								sx={{ color: "black", fontSize: 20 }}
-							>{`${Math.round((loadingState.exportedFile / fields.length) * 100)}%`}</Typography>
-						</Box>
-					</Box>
-				</Box>
+				<LoadingOverlay
+					current={loadingState.exportedFile}
+					total={fields.length}
+				/>
 			)}
 		</Fragment>
 	);

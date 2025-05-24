@@ -1,234 +1,77 @@
-import AddIcon from "@mui/icons-material/Add";
-import DeleteIcon from "@mui/icons-material/Delete";
-import GitHubIcon from "@mui/icons-material/GitHub";
-import InfoIcon from "@mui/icons-material/Info";
-import KeyboardIcon from "@mui/icons-material/Keyboard";
-import TwitterIcon from "@mui/icons-material/Twitter";
-import {
-	AppBar,
-	Box,
-	Button,
-	FormControl,
-	IconButton,
-	InputLabel,
-	MenuItem,
-	Select,
-	Stack,
-	TextField,
-	Toolbar,
-	Tooltip,
-	Typography,
-	styled,
-} from "@mui/material";
-import {
-	type SelectChangeEvent,
-	type TooltipProps,
-	tooltipClasses,
-} from "@mui/material";
-import React, { Fragment, type ReactElement } from "react";
+import { Box, type SelectChangeEvent, Toolbar } from "@mui/material";
+import React, { Fragment, useCallback } from "react";
 import { useEffect, useState } from "react";
-import Ansi from "../presets/ansi.json";
-import Nescius66 from "../presets/nescius66.json";
-import Buttons from "./Buttons";
-
-export type Field = {
-	main: string;
-	shift: string;
-	fn: string;
-	center: string;
-	angle: number;
-	type: number;
-	needBump: boolean;
-	model: number;
-};
-
-const defaultField = () => {
-	return {
-		main: "",
-		shift: "",
-		fn: "",
-		center: "",
-		angle: 0,
-		type: 0,
-		needBump: false,
-		model: 0,
-	};
-};
-
-const presets = [Ansi, Nescius66, [defaultField()]];
-const toolbarHeight = 64;
-const FIELD_WIDTH = 140; // 横幅を定数で指定
-
-function FieldHeader({
-	title,
-	tooltip,
-	expandable = false,
-}: { title: string; tooltip: string | ReactElement; expandable?: boolean }) {
-	return (
-		<Box
-			sx={{
-				display: "flex",
-				alignItems: "center",
-				justifyContent: "space-between",
-				mr: 2,
-				width: FIELD_WIDTH,
-			}}
-		>
-			<Typography>{title}</Typography>
-			{expandable ? (
-				<ExpandableTooltip title={tooltip} arrow>
-					<IconButton>
-						<InfoIcon />
-					</IconButton>
-				</ExpandableTooltip>
-			) : (
-				<Tooltip title={tooltip} arrow>
-					<IconButton>
-						<InfoIcon />
-					</IconButton>
-				</Tooltip>
-			)}
-		</Box>
-	);
-}
-
-const ExpandableTooltip = styled(({ className, ...props }: TooltipProps) => (
-	<Tooltip {...props} classes={{ popper: className }} />
-))({
-	[`& .${tooltipClasses.tooltip}`]: {
-		maxWidth: "none",
-	},
-});
+import {
+	FIELD_WIDTH,
+	PRESETS,
+	TOOLBAR_HEIGHT,
+} from "../constants/appConstants";
+import { type Field, createDefaultField } from "../types/Field";
+import AppFooter from "./AppFooter";
+import AppHeader from "./AppHeader";
+import FieldSectionHeader from "./FieldSectionHeader";
+import KeycapField from "./KeycapField";
 
 export default function Workspace() {
-	const [fields, setFields] = useState<Field[]>([defaultField()]);
+	const [fields, setFields] = useState<Field[]>([createDefaultField()]);
+	const [preset, setPreset] = useState(0);
 
+	// Add a new field
 	const handleAddField = () => {
-		setFields([...fields, defaultField()]);
+		setFields([...fields, createDefaultField()]);
 	};
 
+	// Remove a field
 	const handleRemoveField = (index: number) => {
 		const newFields = fields.filter((_, i) => i !== index);
+		// Ensure at least one field is always present
 		if (newFields.length === 0) {
-			setFields([defaultField()]);
+			setFields([createDefaultField()]);
 		} else {
 			setFields(newFields);
 		}
 	};
 
-	const [preset, setPreset] = useState(0);
+	// Load a preset layout
+	const loadPreset = useCallback((presetIndex: number) => {
+		if (presetIndex < 0 || presetIndex >= PRESETS.length) return;
 
-	useEffect(() => {
-		// デフォルトでANSIレイアウトを読み込む
-		loadPreset(0);
-	}, []);
-
-	const loadPreset = (preset: number) => {
-		if (preset < 0 && preset < presets.length) return;
-
-		const newFields = presets[preset].map((field: Field) => ({
+		const newFields = PRESETS[presetIndex].map((field: Field) => ({
 			...field,
 		}));
 		setFields(newFields);
-	};
+	}, []);
 
+	// Handle preset selection change
 	const handlePresetChange = (event: SelectChangeEvent<number>) => {
 		const newPreset = event.target.value as number;
 		setPreset(newPreset);
 		loadPreset(newPreset);
 	};
 
+	// Load default ANSI layout on initialization
+	useEffect(() => {
+		loadPreset(0);
+	}, [loadPreset]);
+
 	return (
 		<Fragment>
-			<AppBar
-				position="fixed"
-				sx={{
-					zIndex: (theme: { zIndex: { drawer: number } }) =>
-						theme.zIndex.drawer + 1,
-				}}
-			>
-				<Toolbar sx={{ gap: 2 }}>
-					<Stack alignItems="center" direction="row" gap={1}>
-						<Typography variant="body1">Keycap Builder for Web</Typography>
-						<KeyboardIcon />
-					</Stack>
-					<Stack direction="row" alignItems="center" gap={2}>
-						<FormControl size="small">
-							<InputLabel
-								id="select-filter-by-field-label"
-								style={{ color: "white" }}
-							>
-								Preset
-							</InputLabel>
-							<Select
-								sx={{
-									color: "white",
-									".MuiOutlinedInput-notchedOutline": {
-										borderColor: "rgba(228, 219, 233, 0.25)",
-									},
-									"&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-										borderColor: "rgba(228, 219, 233, 0.25)",
-									},
-									"&:hover .MuiOutlinedInput-notchedOutline": {
-										borderColor: "rgba(228, 219, 233, 0.25)",
-									},
-									".MuiSvgIcon-root ": {
-										fill: "white !important",
-									},
-								}}
-								labelId="select-filter-by-field-label"
-								id="select-filter-by-field"
-								value={preset}
-								onChange={handlePresetChange}
-							>
-								<MenuItem value={0}>ANSI</MenuItem>
-								<MenuItem value={1}>Nescius66</MenuItem>
-								<MenuItem value={2}>Blank</MenuItem>
-							</Select>
-						</FormControl>
-						<Tooltip title="Please give me a star!" arrow>
-							<Button
-								variant="text"
-								color="inherit"
-								sx={{ p: 0 }}
-								href="https://github.com/ruchi12377/keycap_builder_web"
-								target="_blank"
-								rel="noopener noreferrer"
-								size="large"
-								startIcon={<GitHubIcon fontSize="large" />}
-							>
-								GitHub
-							</Button>
-						</Tooltip>
-						<Tooltip
-							title="If you have any questions, please contact me on Twitter!"
-							arrow
-						>
-							<Button
-								variant="text"
-								color="inherit"
-								sx={{ p: 0 }}
-								href="https://twitter.com/ruchi12377"
-								target="_blank"
-								rel="noopener noreferrer"
-								size="large"
-								startIcon={<TwitterIcon fontSize="large" />}
-							>
-								Twitter
-							</Button>
-						</Tooltip>
-					</Stack>
-					<Box component="div" sx={{ flexGrow: 1 }} />
-					<Buttons fields={fields} setFields={setFields} />
-				</Toolbar>
-			</AppBar>
+			{/* App Header */}
+			<AppHeader
+				preset={preset}
+				onPresetChange={handlePresetChange}
+				fields={fields}
+				setFields={setFields}
+			/>
+
+			{/* Main Content */}
 			<Box component="main" sx={{ flexGrow: 1, pt: 0 }}>
 				<Toolbar />
 				<Box
 					component="div"
 					sx={{
 						width: "100vw",
-						height: `calc(100vh - ${toolbarHeight}px)`,
+						height: `calc(100vh - ${TOOLBAR_HEIGHT}px)`,
 						overflow: "auto",
 					}}
 				>
@@ -241,178 +84,31 @@ export default function Workspace() {
 						}}
 					>
 						<Box sx={{ flex: 1 }}>
-							<Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-								<FieldHeader title="Main" tooltip="Main key label" />
-								<FieldHeader title="Shift" tooltip="Shift key label" />
-								<FieldHeader title="Fn" tooltip="Function key label" />
-								<FieldHeader
-									title="Center"
-									tooltip="Centered key label. ex) ▲ ←"
-								/>
-								<FieldHeader
-									title="Center Angle"
-									tooltip="Center key label's angle"
-								/>
-								<FieldHeader
-									title="Label Type"
-									tooltip="Type of label. Normal or Centered"
-								/>
-								<FieldHeader
-									title="Key Bump"
-									tooltip={"Put key bump like F and J key"}
-									expandable
-								/>
-								<FieldHeader
-									title="Model Type"
-									tooltip={
-										<img src="model.jpg" alt="Type of model" width={500} />
-									}
-									expandable
-								/>
-								<Typography sx={{ mr: 2, width: FIELD_WIDTH }}>
-									<IconButton color="primary" onClick={handleAddField}>
-										<AddIcon fontSize="large" />
-									</IconButton>
-								</Typography>
-							</Box>
+							{/* Field Headers */}
+							<FieldSectionHeader
+								onAddField={handleAddField}
+								fieldWidth={FIELD_WIDTH}
+							/>
+
+							{/* Field Rows */}
 							{fields.map((field, rowIndex) => (
-								<Box
+								<KeycapField
 									key={rowIndex}
-									sx={{ display: "flex", alignItems: "center", mb: 2 }}
-								>
-									<TextField
-										value={field.main}
-										onChange={(e) => {
-											const newFields = [...fields];
-											newFields[rowIndex].main = e.target.value;
-											setFields(newFields);
-										}}
-										sx={{ mr: 2, width: FIELD_WIDTH }}
-										disabled={field.type === 1}
-									/>
-									<TextField
-										value={field.shift}
-										onChange={(e) => {
-											const newFields = [...fields];
-											newFields[rowIndex].shift = e.target.value;
-											setFields(newFields);
-										}}
-										sx={{ mr: 2, width: FIELD_WIDTH }}
-										disabled={field.type === 1}
-									/>
-									<TextField
-										value={field.fn}
-										onChange={(e) => {
-											const newFields = [...fields];
-											newFields[rowIndex].fn = e.target.value;
-											setFields(newFields);
-										}}
-										sx={{ mr: 2, width: FIELD_WIDTH }}
-										disabled={field.type === 1}
-									/>
-									<TextField
-										value={field.center}
-										onChange={(e) => {
-											const newFields = [...fields];
-											newFields[rowIndex].center = e.target.value;
-											setFields(newFields);
-										}}
-										sx={{ mr: 2, width: FIELD_WIDTH }}
-										disabled={field.type === 0}
-									/>
-									<TextField
-										value={field.angle}
-										onChange={(e) => {
-											const newFields = [...fields];
-											newFields[rowIndex].angle = Number.parseInt(
-												e.target.value,
-											);
-											setFields(newFields);
-										}}
-										inputProps={{
-											inputMode: "numeric",
-											pattern: "[0-9]*",
-										}}
-										sx={{ mr: 2, width: FIELD_WIDTH }}
-										disabled={field.type === 0}
-									/>
-									<TextField
-										select
-										value={field.type}
-										onChange={(e) => {
-											const newFields = [...fields];
-											newFields[rowIndex].type = Number.parseInt(
-												e.target.value,
-												10,
-											);
-											setFields(newFields);
-										}}
-										sx={{ mr: 2, width: FIELD_WIDTH }}
-									>
-										<MenuItem value={0}>General</MenuItem>
-										<MenuItem value={1}>Center</MenuItem>
-									</TextField>
-									<TextField
-										select
-										value={field.needBump ? 1 : 0}
-										onChange={(e) => {
-											const newFields = [...fields];
-											newFields[rowIndex].needBump =
-												Number.parseInt(e.target.value, 10) === 1;
-											setFields(newFields);
-										}}
-										sx={{ mr: 2, width: FIELD_WIDTH }}
-									>
-										<MenuItem value={0}>No</MenuItem>
-										<MenuItem value={1}>Yes</MenuItem>
-									</TextField>
-									<TextField
-										select
-										value={field.model}
-										onChange={(e) => {
-											const newFields = [...fields];
-											newFields[rowIndex].model = Number.parseInt(
-												e.target.value,
-												10,
-											);
-											setFields(newFields);
-										}}
-										sx={{ mr: 2, width: FIELD_WIDTH }}
-									>
-										<MenuItem value={0}>Normal</MenuItem>
-										<MenuItem value={1}>Pit</MenuItem>
-										<MenuItem value={2}>Flat</MenuItem>
-									</TextField>
-									<IconButton
-										color="secondary"
-										onClick={() => handleRemoveField(rowIndex)}
-									>
-										<DeleteIcon fontSize="large" />
-									</IconButton>
-								</Box>
+									field={field}
+									rowIndex={rowIndex}
+									fields={fields}
+									setFields={setFields}
+									onRemove={handleRemoveField}
+									fieldWidth={FIELD_WIDTH}
+								/>
 							))}
 						</Box>
 					</Box>
 				</Box>
 			</Box>
-			<Box
-				component="footer"
-				sx={{
-					py: 2,
-					px: 4,
-					mt: "auto",
-					backgroundColor: (theme) =>
-						theme.palette.mode === "light"
-							? theme.palette.grey[200]
-							: theme.palette.grey[800],
-					textAlign: "center",
-				}}
-			>
-				<Typography variant="body2" color="text.secondary">
-					&copy; 2024 - {new Date().getFullYear()} Ruchi12377. All rights
-					reserved.
-				</Typography>
-			</Box>
+
+			{/* Footer */}
+			<AppFooter />
 		</Fragment>
 	);
 }
