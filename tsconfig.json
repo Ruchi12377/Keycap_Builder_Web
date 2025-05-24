@@ -6,7 +6,6 @@
   },
   "exclude": [
     "**/*.spec.ts",
-    //other exclusions that may help https://github.com/cypress-io/cypress/issues/22059#issuecomment-1428298264
     "node_modules",
   ]
 }

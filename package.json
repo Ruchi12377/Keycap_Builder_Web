@@ -7,29 +7,19 @@
   "scripts": {
     "build": "node esbuild.mjs",
     "dev": "node esbuild.mjs --serve --watch",
-    "lint": "eslint . --ext .ts,.tsx",
-    "prettier": "prettier . --write",
     "serve": "node esbuild.mjs --serve",
     "test": "jest",
-    "test:e2e": "cypress run",
     "watch": "node esbuild.mjs --watch"
   },
   "license": "UNLICENSED",
   "devDependencies": {
+    "@biomejs/biome": "1.9.4",
     "@trivago/prettier-plugin-sort-imports": "^4.3.0",
     "@types/jest": "^29.5.14",
     "@types/three": "^0.163.0",
-    "@typescript-eslint/eslint-plugin": "^6.21.0",
-    "cypress": "^14.4.0",
-    "cypress-multi-reporters": "^1.6.4",
-    "cypress-terminal-report": "^6.2.0",
-    "cypress-visual-regression": "^5.3.0",
     "esbuild": "^0.25.4",
     "esbuild-plugin-copy": "^2.1.1",
     "esbuild-plugin-replace": "^1.4.0",
-    "eslint": "^8.57.1",
-    "eslint-plugin-react": "^7.37.5",
-    "prettier": "^3.5.3",
     "ts-jest": "^29.3.4"
   },
   "dependencies": {

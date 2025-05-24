@@ -58,11 +58,8 @@ jobs:
 
       - name: build
         run: |
-          bash ./scripts/get-openscad.sh
           npm ci
           NODE_ENV=production npm run build
-        env:
-          CORSPROXY: ${{ vars.CORSPROXY }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v4

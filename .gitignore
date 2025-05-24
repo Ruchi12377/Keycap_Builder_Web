@@ -15,12 +15,3 @@
 # OS generated files
 .DS_Store
 Thumbs.db
-
-# ignore vendor files
-/src/vendor
-
-# Cypress
-/cypress/videos
-/cypress/screenshots
-/cypress/snapshots/diff
-/cypress/report-*.xml
