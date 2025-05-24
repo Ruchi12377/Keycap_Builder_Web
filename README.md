@@ -33,7 +33,7 @@ npm run dev
 Format .scad file
 
 ```bash
-npm install -g opensad-format
+npm install -g openscad-format
 openscad-format -i ./public/Keycap.scad
 ```
 

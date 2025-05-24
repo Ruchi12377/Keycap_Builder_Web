@@ -11,4 +11,11 @@ export const PRESETS: Field[][] = [
     [createDefaultField()],
 ];
 
-export const MODEL_PATHS = ["Cap_U.stl", "Cap_O.stl", "Cap_Flat.stl"];
+export const MODEL_PATHS = [
+    "Cap_U.stl",
+    "Cap_U_Mini.stl",
+    "Cap_O.stl",
+    "Cap_O_Mini.stl",
+    "Cap_F.stl",
+    "Cap_F_Mini.stl",
+];

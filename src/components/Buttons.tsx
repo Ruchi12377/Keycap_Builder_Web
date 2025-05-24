@@ -15,6 +15,7 @@ import { useOpenSCADProvider } from "./providers/OpenscadWorkerProvider";
 interface ButtonsProps {
 	fields: Field[];
 	setFields: (fields: Field[]) => void;
+	size: number;
 }
 
 interface LoadingState {
@@ -25,7 +26,7 @@ interface LoadingState {
 /**
  * Component containing action buttons for the keycap builder
  */
-export default function Buttons({ fields, setFields }: ButtonsProps) {
+export default function Buttons({ fields, setFields, size }: ButtonsProps) {
 	const { execExport, isExporting } = useOpenSCADProvider();
 	const [loadingState, setLoadingState] = useState<LoadingState>({
 		loading: false,
@@ -55,11 +56,8 @@ export default function Buttons({ fields, setFields }: ButtonsProps) {
 				reader.onload = () => {
 					try {
 						const json = reader.result as string;
-						const data = JSON.parse(json);
-						const newFields = data.map((field: Field) => ({
-							...field,
-						}));
-						setFields(newFields);
+						const data = JSON.parse(json) as Field[];
+						setFields(data);
 					} catch (error) {
 						console.error("Failed to parse JSON file:", error);
 						alert("Invalid layout file format");
@@ -74,8 +72,12 @@ export default function Buttons({ fields, setFields }: ButtonsProps) {
 	/**
 	 * Creates a customized keycap model based on field values
 	 */
-	const createKeycapModel = (keycapTemplate: string, field: Field): string => {
-		const importModelPath = MODEL_PATHS[field.model];
+	const createKeycapModel = (keycapTemplate: string, field: Field, size: number): string => {
+		// size: 0 for 16mm, 1 for 18mm
+		// The mini model is located immediately after the standard model in the array,
+		// so using (1 - size) selects the correct model: for 18mm (size 1), it uses the standard model,
+		// and for 16mm (size 0), it uses the mini model.
+		const importModelPath = MODEL_PATHS[field.model + (1 - size)];
 		const replacements = {
 			LLB: field.type === 0 ? escapeString(field.main) : "",
 			LLT: field.type === 0 ? escapeString(field.shift) : "",
@@ -98,17 +100,18 @@ export default function Buttons({ fields, setFields }: ButtonsProps) {
 	/**
 	 * Generates a filename for the exported keycap model
 	 */
-	const generateKeycapFilename = (field: Field): string => {
+	const generateKeycapFilename = (field: Field, size: number): string => {
 		const safeLLB = makeFilenameSafe(field.main);
 		const safeLLT = makeFilenameSafe(field.shift);
 		const safeLRB = makeFilenameSafe(field.fn);
 		const safeLC = makeFilenameSafe(field.center);
 		const modelType = ["U", "O", "F"][field.model];
 		const needBump = field.needBump ? "Bump" : "";
+		const modelSize = size === 0 ? "_Mini" : "";
 
 		return field.type === 0
-			? `Keycap_${safeLLB}_${safeLLT}_${safeLRB}_${needBump}_${modelType}.stl`
-			: `Keycap_${safeLC}_${field.angle}_${needBump}_${modelType}.stl`;
+			? `Keycap_${safeLLB}_${safeLLT}_${safeLRB}_${needBump}_${modelType}${modelSize}.stl`
+			: `Keycap_${safeLC}_${field.angle}_${needBump}_${modelType}${modelSize}.stl`;
 	};
 
 	/**
@@ -128,8 +131,8 @@ export default function Buttons({ fields, setFields }: ButtonsProps) {
 				const field = fields[index];
 
 				// Create customized keycap model
-				const customKeycap = createKeycapModel(keycapTemplate, field);
-				const filename = generateKeycapFilename(field);
+				const customKeycap = createKeycapModel(keycapTemplate, field, size);
+				const filename = generateKeycapFilename(field, size);
 
 				// Export the model
 				const stlFile = await execExport(customKeycap);

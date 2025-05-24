@@ -1,5 +1,5 @@
 import { Box, type SelectChangeEvent, Toolbar } from "@mui/material";
-import React, { Fragment, useCallback } from "react";
+import React, { Fragment, useCallback, useMemo } from "react";
 import { useEffect, useState } from "react";
 import {
 	FIELD_WIDTH,
@@ -15,22 +15,46 @@ import KeycapField from "./KeycapField";
 export default function Workspace() {
 	const [fields, setFields] = useState<Field[]>([createDefaultField()]);
 	const [preset, setPreset] = useState(0);
+	// 1 represents the default size (18mm)
+	const [size, setSize] = useState(1);
 
 	// Add a new field
-	const handleAddField = () => {
-		setFields([...fields, createDefaultField()]);
-	};
+	const handleAddField = useCallback(() => {
+		setFields((prevFields) => [...prevFields, createDefaultField()]);
+	}, []);
 
-	// Remove a field
-	const handleRemoveField = (index: number) => {
-		const newFields = fields.filter((_, i) => i !== index);
-		// Ensure at least one field is always present
-		if (newFields.length === 0) {
-			setFields([createDefaultField()]);
-		} else {
-			setFields(newFields);
-		}
-	};
+	// Remove a field - optimized for performance
+	const handleRemoveField = useCallback((index: number) => {
+		setFields((prevFields) => {
+			// Return early if it's the last field
+			if (prevFields.length === 1) {
+				return [createDefaultField()];
+			}
+
+			// Directly create a new array without filter (more efficient)
+			const newFields = [
+				...prevFields.slice(0, index),
+				...prevFields.slice(index + 1)
+			];
+			return newFields;
+		});
+	}, []);
+
+	// Update a specific field property efficiently
+	const updateFieldProperty = useCallback(<K extends keyof Field>(
+		index: number,
+		key: K,
+		value: Field[K]
+	) => {
+		setFields((prevFields) => {
+			// Only create a new array if we're actually changing something
+			if (prevFields[index][key] === value) return prevFields;
+
+			const newFields = [...prevFields];
+			newFields[index] = { ...newFields[index], [key]: value };
+			return newFields;
+		});
+	}, []);
 
 	// Load a preset layout
 	const loadPreset = useCallback((presetIndex: number) => {
@@ -43,16 +67,36 @@ export default function Workspace() {
 	}, []);
 
 	// Handle preset selection change
-	const handlePresetChange = (event: SelectChangeEvent<number>) => {
+	const handlePresetChange = useCallback((event: SelectChangeEvent<number>) => {
 		const newPreset = event.target.value as number;
 		setPreset(newPreset);
 		loadPreset(newPreset);
-	};
+	}, [loadPreset]);
+
+	// Handle size selection change
+	const handleSizeChange = useCallback((event: SelectChangeEvent<number>) => {
+		const newSize = event.target.value as number;
+		setSize(newSize);
+	}, []);
 
 	// Load default ANSI layout on initialization
 	useEffect(() => {
 		loadPreset(0);
 	}, [loadPreset]);
+
+	// Memoize the keycap fields to prevent unnecessary renders
+	const keycapFields = useMemo(() => {
+		return fields.map((field, rowIndex) => (
+			<KeycapField
+				key={rowIndex}
+				field={field}
+				rowIndex={rowIndex}
+				updateFieldProperty={updateFieldProperty}
+				onRemove={handleRemoveField}
+				fieldWidth={FIELD_WIDTH}
+			/>
+		));
+	}, [fields, updateFieldProperty, handleRemoveField]);
 
 	return (
 		<Fragment>
@@ -60,6 +104,8 @@ export default function Workspace() {
 			<AppHeader
 				preset={preset}
 				onPresetChange={handlePresetChange}
+				size={size}
+				onSizeChange={handleSizeChange}
 				fields={fields}
 				setFields={setFields}
 			/>
@@ -91,17 +137,7 @@ export default function Workspace() {
 							/>
 
 							{/* Field Rows */}
-							{fields.map((field, rowIndex) => (
-								<KeycapField
-									key={rowIndex}
-									field={field}
-									rowIndex={rowIndex}
-									fields={fields}
-									setFields={setFields}
-									onRemove={handleRemoveField}
-									fieldWidth={FIELD_WIDTH}
-								/>
-							))}
+							{keycapFields}
 						</Box>
 					</Box>
 				</Box>

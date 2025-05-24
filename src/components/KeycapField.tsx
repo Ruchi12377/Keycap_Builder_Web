@@ -1,61 +1,53 @@
 import DeleteIcon from "@mui/icons-material/Delete";
 import { Box, IconButton, MenuItem, TextField } from "@mui/material";
-import React from "react";
+import React, { memo } from "react";
 import type { Field } from "../types/Field";
 
 interface KeycapFieldProps {
   field: Field;
   rowIndex: number;
-  fields: Field[];
-  setFields: (fields: Field[]) => void;
+  updateFieldProperty: <K extends keyof Field>(index: number, key: K, value: Field[K]) => void;
   onRemove: (index: number) => void;
   fieldWidth: number;
 }
 
-export default function KeycapField({
+function KeycapField({
   field,
   rowIndex,
-  fields,
-  setFields,
+  updateFieldProperty,
   onRemove,
   fieldWidth,
 }: KeycapFieldProps) {
-  const updateField = <K extends keyof Field>(key: K, value: Field[K]) => {
-    const newFields = [...fields];
-    newFields[rowIndex][key] = value;
-    setFields(newFields);
-  };
-
   return (
-    <Box key={rowIndex} sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+    <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
       <TextField
         value={field.main}
-        onChange={(e) => updateField("main", e.target.value)}
+        onChange={(e) => updateFieldProperty(rowIndex, "main", e.target.value)}
         sx={{ mr: 2, width: fieldWidth }}
         disabled={field.type === 1}
       />
       <TextField
         value={field.shift}
-        onChange={(e) => updateField("shift", e.target.value)}
+        onChange={(e) => updateFieldProperty(rowIndex, "shift", e.target.value)}
         sx={{ mr: 2, width: fieldWidth }}
         disabled={field.type === 1}
       />
       <TextField
         value={field.fn}
-        onChange={(e) => updateField("fn", e.target.value)}
+        onChange={(e) => updateFieldProperty(rowIndex, "fn", e.target.value)}
         sx={{ mr: 2, width: fieldWidth }}
         disabled={field.type === 1}
       />
       <TextField
         value={field.center}
-        onChange={(e) => updateField("center", e.target.value)}
+        onChange={(e) => updateFieldProperty(rowIndex, "center", e.target.value)}
         sx={{ mr: 2, width: fieldWidth }}
         disabled={field.type === 0}
       />
       <TextField
         value={field.angle}
         onChange={(e) =>
-          updateField("angle", Number.parseInt(e.target.value || "0"))
+          updateFieldProperty(rowIndex, "angle", Number.parseInt(e.target.value || "0"))
         }
         inputProps={{
           inputMode: "numeric",
@@ -68,7 +60,7 @@ export default function KeycapField({
         select
         value={field.type}
         onChange={(e) =>
-          updateField("type", Number.parseInt(e.target.value, 10))
+          updateFieldProperty(rowIndex, "type", Number.parseInt(e.target.value, 10))
         }
         sx={{ mr: 2, width: fieldWidth }}
       >
@@ -79,7 +71,7 @@ export default function KeycapField({
         select
         value={field.needBump ? 1 : 0}
         onChange={(e) =>
-          updateField("needBump", Number.parseInt(e.target.value, 10) === 1)
+          updateFieldProperty(rowIndex, "needBump", Number.parseInt(e.target.value, 10) === 1)
         }
         sx={{ mr: 2, width: fieldWidth }}
       >
@@ -90,7 +82,7 @@ export default function KeycapField({
         select
         value={field.model}
         onChange={(e) =>
-          updateField("model", Number.parseInt(e.target.value, 10))
+          updateFieldProperty(rowIndex, "model", Number.parseInt(e.target.value, 10))
         }
         sx={{ mr: 2, width: fieldWidth }}
       >
@@ -104,3 +96,6 @@ export default function KeycapField({
     </Box>
   );
 }
+
+// Memoize the component to prevent unnecessary re-renders
+export default memo(KeycapField);
