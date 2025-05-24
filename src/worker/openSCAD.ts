@@ -15,7 +15,10 @@ const fontsConf = `<?xml version="1.0"?>
 let interNotoFont: ArrayBuffer;
 let keycapU: ArrayBuffer;
 let keycapO: ArrayBuffer;
-let keycapFlat: ArrayBuffer;
+let keycapF: ArrayBuffer;
+let keycapUMini: ArrayBuffer;
+let keycapOMini: ArrayBuffer;
+let keycapFMini: ArrayBuffer;
 let loadedAssets = false;
 
 class OpenSCADWrapper {
@@ -37,12 +40,20 @@ class OpenSCADWrapper {
 				"Inter-18pt-Noto-Regular.ttf",
 			);
 			interNotoFont = await interNotoFontResponse.arrayBuffer();
+			// 18mm
 			const keycapUResponse = await fetch("Cap_U.stl");
 			keycapU = await keycapUResponse.arrayBuffer();
 			const keycapOResponse = await fetch("Cap_O.stl");
 			keycapO = await keycapOResponse.arrayBuffer();
-			const keycapFlatResponse = await fetch("Cap_Flat.stl");
-			keycapFlat = await keycapFlatResponse.arrayBuffer();
+			const keycapFResponse = await fetch("Cap_F.stl");
+			keycapF = await keycapFResponse.arrayBuffer();
+			// 16mm
+			const keycapUMiniResponse = await fetch("Cap_U_Mini.stl");
+			keycapUMini = await keycapUMiniResponse.arrayBuffer();
+			const keycapOMiniResponse = await fetch("Cap_O_Mini.stl");
+			keycapOMini = await keycapOMiniResponse.arrayBuffer();
+			const keycapFMiniResponse = await fetch("Cap_F_Mini.stl");
+			keycapFMini = await keycapFMiniResponse.arrayBuffer();
 
 			loadedAssets = true;
 		}
@@ -62,7 +73,10 @@ class OpenSCADWrapper {
 		// Add keycap files
 		instance.FS.writeFile("Cap_U.stl", new Int8Array(keycapU));
 		instance.FS.writeFile("Cap_O.stl", new Int8Array(keycapO));
-		instance.FS.writeFile("Cap_Flat.stl", new Int8Array(keycapFlat));
+		instance.FS.writeFile("Cap_F.stl", new Int8Array(keycapF));
+		instance.FS.writeFile("Cap_U_Mini.stl", new Int8Array(keycapUMini));
+		instance.FS.writeFile("Cap_O_Mini.stl", new Int8Array(keycapOMini));
+		instance.FS.writeFile("Cap_F_Mini.stl", new Int8Array(keycapFMini));
 
 		for (const file of this.files) {
 			// Make sure the directory of the file exists

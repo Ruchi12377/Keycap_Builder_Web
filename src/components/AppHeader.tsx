@@ -22,6 +22,8 @@ import Buttons from "./Buttons";
 interface AppHeaderProps {
   preset: number;
   onPresetChange: (event: SelectChangeEvent<number>) => void;
+  size: number
+  onSizeChange: (event: SelectChangeEvent<number>) => void;
   fields: Field[];
   setFields: (fields: Field[]) => void;
 }
@@ -29,6 +31,8 @@ interface AppHeaderProps {
 export default function AppHeader({
   preset,
   onPresetChange,
+  size,
+  onSizeChange,
   fields,
   setFields,
 }: AppHeaderProps) {
@@ -79,6 +83,38 @@ export default function AppHeader({
               <MenuItem value={2}>Blank</MenuItem>
             </Select>
           </FormControl>
+          <FormControl size="small">
+            <InputLabel
+              id="select-size-label"
+              style={{ color: "white" }}
+            >
+              Size
+            </InputLabel>
+            <Select
+              sx={{
+                color: "white",
+                ".MuiOutlinedInput-notchedOutline": {
+                  borderColor: "rgba(228, 219, 233, 0.25)",
+                },
+                "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                  borderColor: "rgba(228, 219, 233, 0.25)",
+                },
+                "&:hover .MuiOutlinedInput-notchedOutline": {
+                  borderColor: "rgba(228, 219, 233, 0.25)",
+                },
+                ".MuiSvgIcon-root ": {
+                  fill: "white !important",
+                },
+              }}
+              labelId="select-size-label"
+              id="select-size"
+              value={size}
+              onChange={onSizeChange}
+            >
+              <MenuItem value={0}>16mm</MenuItem>
+              <MenuItem value={1}>18mm</MenuItem>
+            </Select>
+          </FormControl>
           <Tooltip title="Please give me a star!" arrow>
             <Button
               variant="text"
@@ -112,7 +148,7 @@ export default function AppHeader({
           </Tooltip>
         </Stack>
         <Box component="div" sx={{ flexGrow: 1 }} />
-        <Buttons fields={fields} setFields={setFields} />
+        <Buttons fields={fields} setFields={setFields} size={size} />
       </Toolbar>
     </AppBar>
   );

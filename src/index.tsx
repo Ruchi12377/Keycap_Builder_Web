@@ -6,8 +6,8 @@ import { CssBaseline } from "@mui/material";
 import { SnackbarProvider, enqueueSnackbar } from "notistack";
 import React from "react";
 import { createRoot } from "react-dom/client";
-import OpenscadWorkerProvider from "./components/providers/OpenscadWorkerProvider";
 import Workspace from "./components/Workspace";
+import OpenscadWorkerProvider from "./components/providers/OpenscadWorkerProvider";
 
 createRoot(document.getElementById("root")).render(
 	<React.StrictMode>
